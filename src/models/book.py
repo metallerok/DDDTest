@@ -5,6 +5,8 @@ from src.models.primitives.book import (
     SABookTitle,
     SAOrderBookCount,
     OrderBookCount,
+    SAOrderStatus,
+    OrderStatus
 )
 from uuid import uuid4
 
@@ -32,7 +34,18 @@ class OrderBook(Base):
 
 class Order(Base):
     __tablename__ = "order"
+
+    def __init__(self, status: OrderStatus = None, *args, **kwargs):
+        if not status:
+            self.status = OrderStatus()
+        else:
+            self.status = status
+
+        super().__init__(*args, **kwargs)
+
     id = sa.Column(sa.String, primary_key=True, nullable=False)
+
+    status: OrderStatus = sa.Column(SAOrderStatus, nullable=False, default=OrderStatus())
 
     _order_books = relation("OrderBook")
 
@@ -48,3 +61,12 @@ class Order(Base):
                 count=count,
             )
         )
+
+    def accept(self):
+        self.status.accept()
+
+    def pay(self):
+        self.status.pay()
+
+    def delivery(self):
+        self.status.delivery()

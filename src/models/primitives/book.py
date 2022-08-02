@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 from src.models.exc import AttributeValidationError
 from copy import deepcopy
+from enum import Enum
 
 
 class BookTitle:
@@ -86,3 +87,65 @@ class SAOrderBookCount(sa.TypeDecorator):
 
     def process_result_value(self, value, dialect):
         return OrderBookCount(value)
+
+
+class OrderStatusValue(Enum):
+    CREATED = 1
+    ACCEPTED = 2
+    PAID = 3
+    DELIVERED = 4
+
+
+class OrderStatus:
+    def __init__(self, status: OrderStatusValue = None):
+        if status is None:
+            self._status = OrderStatusValue.CREATED
+        else:
+            self._status = status
+
+    @property
+    def status(self):
+        return deepcopy(self._status)
+
+    def accept(self):
+        if self._status not in [
+            OrderStatusValue.CREATED
+        ]:
+            raise RuntimeError("Only created order can be accepted")
+
+        self._status = OrderStatusValue.ACCEPTED
+
+    def pay(self):
+        if self._status not in [
+            OrderStatusValue.ACCEPTED
+        ]:
+            raise RuntimeError("Payment process available only for created order")
+
+        self._status = OrderStatusValue.PAID
+
+    def delivery(self):
+        if self._status not in [
+            OrderStatusValue.PAID
+        ]:
+            raise RuntimeError("Not paid order cannot be delivered")
+
+        self._status = OrderStatusValue.DELIVERED
+
+    def __eq__(self, other: 'OrderStatus'):
+        return self._status == other._status
+
+
+class SAOrderStatus(sa.TypeDecorator):
+    @property
+    def python_type(self):
+        return OrderStatus
+
+    impl = sa.String
+
+    cache_ok = True
+
+    def process_bind_param(self, value: OrderStatus, dialect):
+        return value.status.name
+
+    def process_result_value(self, value, dialect):
+        return OrderStatus(value)

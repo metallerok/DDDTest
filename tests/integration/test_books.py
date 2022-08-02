@@ -7,11 +7,18 @@ from sqlalchemy.orm import Session
 from src.models.book import (
     Book,
     Order,
-    OrderBookCount,
     OrderBook,
 )
-from src.models.primitives.book import BookTitle, OrderBookCount
+from src.models.primitives.book import (
+    BookTitle,
+    OrderBookCount,
+    OrderStatus,
+    OrderStatusValue
+)
+
 from src.repositories.books import SABooksRepo
+from src.repositories.orders import SAOrdersRepo
+
 from src.schemas.book import BookSchema
 from src.models.exc import AttributeValidationError
 from uuid import uuid4
@@ -124,3 +131,53 @@ def test_try_directly_update_order_books():
         )
 
     assert e.value.args[0] == "'tuple' object has no attribute 'append'"
+
+
+def test_order_status_after_creation(db_session):
+    orders_repo = SAOrdersRepo(db_session)
+
+    order = Order(
+        id=str(uuid4())
+    )
+
+    orders_repo.add(order)
+
+    db_session.commit()
+
+    order = orders_repo.get(order.id)
+
+    assert order.status
+    assert type(order.status) == OrderStatus
+    assert order.status == OrderStatus(OrderStatusValue.CREATED)
+
+
+def test_accept_order():
+    order = Order(id=str(uuid4()))
+
+    assert order.status == OrderStatus(OrderStatusValue.CREATED)
+
+    order.accept()
+
+    assert order.status == OrderStatus(OrderStatusValue.ACCEPTED)
+
+
+def test_orders_repo_list_orders_by_status(db_session):
+    orders_repo = SAOrdersRepo(db_session)
+
+    order1 = Order(id=str(uuid4()))
+
+    order2 = Order(id=str(uuid4()))
+    order2.accept()
+
+    orders_repo.add(order1)
+    orders_repo.add(order2)
+
+    assert order1.status == OrderStatus(OrderStatusValue.CREATED)
+    assert order2.status == OrderStatus(OrderStatusValue.ACCEPTED)
+
+    db_session.commit()
+
+    orders = orders_repo.list_by_status(OrderStatus(OrderStatusValue.ACCEPTED))
+
+    assert order1 not in orders
+    assert order2 in orders

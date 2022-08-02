@@ -9,7 +9,7 @@ import venusian
 @pytest.fixture()
 def db_engine():
     venusian.Scanner().scan(models)
-    engine = create_engine("sqlite:///app.sqlite3")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
