@@ -2,7 +2,7 @@ import abc
 from sqlalchemy.orm import Session
 from typing import Optional
 from src.models.book import Book
-
+from src.models.primitives BookTitle
 
 class BooksRepoABC(abc.ABC):
     @abc.abstractmethod
@@ -11,6 +11,10 @@ class BooksRepoABC(abc.ABC):
 
     @abc.abstractmethod
     def get(self, id_: str) -> Optional[Book]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_by_title(self, title: string) -> Optional[Book]:
         raise NotImplementedError
 
 
@@ -29,5 +33,16 @@ class SABooksRepo(BooksRepoABC):
         )
 
         result = query.one_or_none()
+
+        return result
+
+    def get_by_title(self, title: string) -> Optional[Book]:
+        query = self._db_session.query(
+            Book
+        ).filter(
+            sa.type_coerce(Book.title, sa.String).ilike(f"%{title}%"),
+        )
+
+        result = query.first()
 
         return result

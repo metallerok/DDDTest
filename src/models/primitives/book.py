@@ -6,6 +6,7 @@ from enum import Enum
 
 class BookTitle:
     MAX_LENGTH = 240
+    PATTERN = r"^[a-zA-Z0-9а-яА-Я-_() ]{3,240}$"
 
     def __init__(self, title: str):
         if title is None:
@@ -17,6 +18,11 @@ class BookTitle:
         if len(title) > self.MAX_LENGTH:
             raise AttributeValidationError("BookTitle is too long")
 
+        regexp = re.compile(self.PATTERN)
+
+        if not bool(regexp.match(value)):
+            raise AttributeValidationError("BookTitle does not match expected pattern")
+
         self._title = title
 
     @property
@@ -24,6 +30,8 @@ class BookTitle:
         return deepcopy(self._title)
 
     def __eq__(self, other: 'BookTitle'):
+        other_value = other.value if type(other) == BookTitle else None
+
         return self._title == other.title
 
     def __str__(self):
@@ -43,10 +51,16 @@ class SABookTitle(sa.TypeDecorator):
     cache_ok = True
 
     def process_bind_param(self, value: BookTitle, dialect):
-        return value.title
+        if value:
+            return value.title
+
+        return None
 
     def process_result_value(self, value, dialect):
-        return BookTitle(value)
+        if value:
+            return BookTitle(value)
+
+        return None
 
 
 class OrderBookCount:
